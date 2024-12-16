@@ -1,6 +1,6 @@
 # Disease Diagnosis System
 
-An intelligent agent designed using Prolog to diagnose diseases based on symptoms provided by the user. The system interacts with the user, collects symptoms, and matches them to predefined disease hypotheses.
+An Expert System designed using Prolog to diagnose diseases based on symptoms provided by the user. The system interacts with the user, collects symptoms, and matches them to predefined disease hypotheses.
 
 ---
 
