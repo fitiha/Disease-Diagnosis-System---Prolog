@@ -39,8 +39,8 @@ The system can diagnose the following diseases:
 1. Clone the repository:
 
    ```bash
-   git clone https://github.com/yourusername/disease-diagnosis-system.git
-   cd disease-diagnosis-system
+   git clone https://github.com/fitiha/Disease-Diagnosis-System---Prolog.git
+   cd Disease-Diagnosis-System---Prolog
    ```
 
 2. Run the Prolog program:
