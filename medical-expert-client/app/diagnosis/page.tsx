@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -11,49 +11,34 @@ type Symptom = 'fever' | 'rash' | 'headache' | 'runny_nose' | 'conjunctivitis' |
 
 const symptoms: Symptom[] = ['fever', 'rash', 'headache', 'runny_nose', 'conjunctivitis', 'cough', 'body_ache', 'chills', 'sore_throat', 'sneezing', 'swollen_glands', 'fatigue', 'nausea', 'vomiting', 'diarrhea']
 
-const useWebSocket = (url: string) => {
-  const [socket, setSocket] = useState<WebSocket | null>(null)
-  const [messages, setMessages] = useState<any[]>([])
+const sendMessage = async ({ patient, symptoms }: { patient: string, symptoms: Record<string, boolean> }) => {
+  try {
+    const response = await fetch('http://localhost:8080/diagnose', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ patient, symptoms }),
+    });
 
-  useEffect(() => {
-    const ws = new WebSocket(url)
-    ws.onopen = () => console.log('WebSocket connection opened')
-    ws.onmessage = (event) => {
-      const message = JSON.parse(event.data)
-      setMessages((prevMessages) => [...prevMessages, message])
+    if (!response.ok) {
+      throw new Error(`Server responded with status ${response.status}`);
     }
-    ws.onclose = () => console.log('WebSocket connection closed')
-    setSocket(ws)
 
-    return () => {
-      ws.close()
-    }
-  }, [url])
-
-  const sendMessage = (message: any) => {
-    if (socket && socket.readyState === WebSocket.OPEN) {
-      socket.send(JSON.stringify(message))
-    }
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    throw new Error(`Failed to get diagnosis from Prolog server: ${error.message}`);
   }
+};
 
-  return { messages, sendMessage }
-}
 
 export default function DiagnosisPage() {
-  const { messages, sendMessage } = useWebSocket('ws://localhost:8080/diagnose')
   const [name, setName] = useState('')
   const [currentSymptomIndex, setCurrentSymptomIndex] = useState<number>(-1)
   const [patientSymptoms, setPatientSymptoms] = useState<Record<Symptom, boolean>>({} as Record<Symptom, boolean>)
-  const [diagnosis, setDiagnosis] = useState<string[] | null>(null)
+  const [diagnosis, setDiagnosis] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
-
-  useEffect(() => {
-    if (messages.length > 0) {
-      const latestMessage = messages[messages.length - 1]
-      setDiagnosis(latestMessage.diagnosis)
-      setIsLoading(false)
-    }
-  }, [messages])
 
   const handleStart = () => {
     if (name) {
@@ -68,6 +53,7 @@ export default function DiagnosisPage() {
     if (currentSymptomIndex < symptoms.length - 1) {
       setCurrentSymptomIndex(currentSymptomIndex + 1)
     } else {
+      console.log({ patient: name, symptoms: patientSymptoms });
       getDiagnosis()
     }
   }
@@ -75,6 +61,14 @@ export default function DiagnosisPage() {
   const getDiagnosis = () => {
     setIsLoading(true)
     sendMessage({ patient: name, symptoms: patientSymptoms })
+      .then((data) => {
+        setDiagnosis(data.diagnosis)
+        setIsLoading(false)
+      })
+      .catch((error) => {
+        console.error('Error getting diagnosis:', error.message)
+        setIsLoading(false)
+      })
   }
 
   const reset = () => {
@@ -110,8 +104,8 @@ export default function DiagnosisPage() {
                   onChange={(e) => setName(e.target.value)}
                   className="text-lg p-6"
                 />
-                <Button 
-                  onClick={handleStart} 
+                <Button
+                  onClick={handleStart}
                   disabled={!name}
                   size="lg"
                   className="w-full text-lg py-6"
@@ -124,14 +118,14 @@ export default function DiagnosisPage() {
               <div className="space-y-6">
                 <p className="text-xl">{name}, do you have {currentSymptom.replace('_', ' ')}?</p>
                 <div className="grid grid-cols-2 gap-4">
-                  <Button 
+                  <Button
                     onClick={() => handleAnswer(true)}
                     size="lg"
                     className="text-lg py-6"
                   >
                     Yes
                   </Button>
-                  <Button 
+                  <Button
                     onClick={() => handleAnswer(false)}
                     size="lg"
                     className="text-lg py-6"
@@ -146,21 +140,13 @@ export default function DiagnosisPage() {
             )}
             {diagnosis && (
               <div className="space-y-6">
-                {diagnosis.length > 0 ? (
-                  <>
-                    <p className="text-xl">{name}, based on your symptoms, you probably have:</p>
-                    <ul className="space-y-2">
-                      {diagnosis.map((disease, index) => (
-                        <li key={index} className="text-lg">
-                          • {disease.replace('_', ' ')}
-                        </li>
-                      ))}
-                    </ul>
-                  </>
-                ) : (
-                  <p className="text-xl">Sorry, I don't seem to be able to diagnose the disease.</p>
-                )}
-                <Button 
+                <p className="text-xl">{name}, based on your symptoms, you probably have:</p>
+                <ul className="space-y-2">
+                  <li className="text-lg">
+                    • {diagnosis.toUpperCase()}
+                  </li>
+                </ul>
+                <Button
                   onClick={reset}
                   size="lg"
                   className="w-full text-lg py-6"
