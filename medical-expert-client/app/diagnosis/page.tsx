@@ -28,7 +28,7 @@ const sendMessage = async ({ patient, symptoms }: { patient: string, symptoms: R
     const data = await response.json();
     return data;
   } catch (error) {
-    throw new Error(`Failed to get diagnosis from Prolog server: ${error.message}`);
+    throw new Error(`Failed to get diagnosis from Prolog server: ${error}`);
   }
 };
 
